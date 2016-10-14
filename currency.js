@@ -8,6 +8,7 @@
 (function(global) {
   "use strict";
 
+  var SCALE = 100;
   /**
    * Create a new instance of currency.js
    * {number|string|currency}
@@ -21,7 +22,7 @@
 
     // Set int/real values
     that.intValue = parse(value);
-    that.value = that.intValue / 100;
+    that.value = that.intValue / SCALE;
   };
 
   // Default options
@@ -29,10 +30,13 @@
     symbol: '$'
     , separator: ','
     , decimal: '.'
+    , precision: 2
     , formatWithSymbol: false
     , errorOnInvalid: false
   };
 
+  
+  
   // Convert a number to a normalized value
   function parse(value, round) {
     var v = 0;
@@ -41,7 +45,7 @@
     typeof(round) === 'undefined' && (round = true);
 
     if (typeof value === 'number') {
-      v = value * 100;
+      v = value * SCALE;
     } else if (value instanceof currency) {
       v = value.intValue;
     } else if (typeof(value) === 'string') {
@@ -52,7 +56,7 @@
               .replace(/\((.*)\)/, '-$1') // allow negative e.g. (1.99)
               .replace(regex, '')         // replace any non numeric values
               .replace(decimal, '.')      // convert any decimal values
-              * 100                       // scale number to integer value
+              * SCALE                     // scale number to integer value
           );
       v = isNaN(v) ? 0 : v;
     } else {
@@ -65,21 +69,27 @@
     return round ? Math.round(v) : v;
   }
 
+  function toFixed(value,precision) {
+		var power = Math.pow(10,precision);
+		// Multiply up by precision, round accurately, then divide and use native toFixed():
+		return (Math.round(value * power) / power).toFixed(precision);
+  };
+  
   currency.prototype = {
 
     add: function(number) {
       var v = this.intValue;
-      return currency((v += parse(number)) / 100);
+      return currency((v += parse(number)) / SCALE);
     },
 
     subtract: function(number) {
       var v = this.intValue;
-      return currency((v -= parse(number)) / 100);
+      return currency((v -= parse(number)) / SCALE);
     },
 
     multiply: function(number) {
       var v = this.intValue;
-      return currency((v *= parse(number, false)) / 10000);
+      return currency((v/SCALE)*(parse(number, false)) / (SCALE * SCALE));
     },
 
     divide: function(number) {
@@ -94,7 +104,7 @@
         , pennies = Math.abs(value - (split * count));
 
       for (; count !== 0; count--) {
-        var item = currency(split / 100);
+        var item = currency(split / SCALE);
 
         // Add any left over pennies
         pennies-- > 0 && (item = parseFloat(item) >= 0 ? item.add(.01) : item.subtract(.01));
@@ -106,11 +116,11 @@
     },
 
     dollars: function() {
-      return Math.round(this.intValue / 100);
+      return Math.round(this.intValue / SCALE);
     },
 
     cents: function() {
-      return Math.round(this.intValue % 100);
+      return Math.round(this.intValue % SCALE);
     },
 
     format: function(symbol) {
@@ -123,8 +133,16 @@
         .replace(/\.(\d{2})$/, settings.decimal + '$1');
     },
 
+    toFixed: function() {
+      return toFixed(this.intValue / SCALE), settings.precision);
+    },
+    
     toString: function() {
-      return (this.intValue / 100).toFixed(2);
+      return this.toFixed);
+    },
+    
+    valueOf: function() {
+      return parseFloat(this.toFixed());
     },
 
     toJSON: function() {
